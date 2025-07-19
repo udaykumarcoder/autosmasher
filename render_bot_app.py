@@ -70,8 +70,12 @@ class RenderSmashKartsBot:
                 EC.presence_of_element_located((By.TAG_NAME, "body"))
             )
             
+            # Focus on the game
+            body = self.driver.find_element(By.TAG_NAME, "body")
+            body.click()
+            
             self.status = "game_loaded"
-            print("✅ Game loaded!")
+            print("✅ Game loaded and focused!")
             return True
             
         except Exception as e:
@@ -80,8 +84,8 @@ class RenderSmashKartsBot:
             return False
     
     def bot_cycle(self):
-        """Main bot movement cycle"""
-        print("🤖 Bot started on Render! Running movement pattern...")
+        """Main bot movement cycle - SIMPLIFIED FOR WORKING"""
+        print("🤖 Bot started! Cart is moving...")
         self.status = "running"
         
         try:
@@ -92,53 +96,42 @@ class RenderSmashKartsBot:
             while self.bot_running:
                 try:
                     self.cycle_count += 1
-                    print(f"🔄 Render Cycle {self.cycle_count}")
+                    print(f"🔄 Cycle {self.cycle_count} - Cart moving!")
                     
-                    # 1. Hold Up for 5 seconds
+                    # SIMPLE MOVEMENT PATTERN - JUST MAKE THE CART MOVE
+                    
+                    # 1. Forward movement
                     actions.key_down(Keys.ARROW_UP).perform()
-                    if not self._sleep_check(5, "Up"):
+                    if not self._sleep_check(3, "Forward"):
                         break
                     
-                    # 2. Up+Left for 5 seconds
+                    # 2. Turn left
                     actions.key_down(Keys.ARROW_LEFT).perform()
-                    if not self._sleep_check(5, "Up+Left"):
+                    if not self._sleep_check(2, "Left"):
                         break
                     actions.key_up(Keys.ARROW_LEFT).perform()
                     
-                    # 3. Up+Right for 5 seconds
+                    # 3. Turn right
                     actions.key_down(Keys.ARROW_RIGHT).perform()
-                    if not self._sleep_check(5, "Up+Right"):
+                    if not self._sleep_check(2, "Right"):
                         break
                     actions.key_up(Keys.ARROW_RIGHT).perform()
                     
-                    # 4. Space
+                    # 4. Jump
                     actions.key_down(Keys.SPACE).key_up(Keys.SPACE).perform()
-                    if not self._sleep_check(0.5, "Space"):
+                    if not self._sleep_check(1, "Jump"):
                         break
                     
-                    # 5. Down for 5 seconds
+                    # 5. Backward
                     actions.key_up(Keys.ARROW_UP).perform()
                     actions.key_down(Keys.ARROW_DOWN).perform()
-                    if not self._sleep_check(5, "Down"):
+                    if not self._sleep_check(3, "Backward"):
                         break
                     
-                    # 6. Down+Left for 5 seconds
-                    actions.key_down(Keys.ARROW_LEFT).perform()
-                    if not self._sleep_check(5, "Down+Left"):
-                        break
-                    actions.key_up(Keys.ARROW_LEFT).perform()
-                    
-                    # 7. Down+Right for 5 seconds
-                    actions.key_down(Keys.ARROW_RIGHT).perform()
-                    if not self._sleep_check(5, "Down+Right"):
-                        break
-                    actions.key_up(Keys.ARROW_RIGHT).perform()
-                    
-                    # 8. Space
-                    actions.key_down(Keys.SPACE).key_up(Keys.SPACE).perform()
-                    
-                    # Reset for next cycle
+                    # 6. Stop and repeat
                     actions.key_up(Keys.ARROW_DOWN).perform()
+                    if not self._sleep_check(1, "Pause"):
+                        break
                     
                 except Exception as e:
                     self.last_error = str(e)
@@ -152,7 +145,7 @@ class RenderSmashKartsBot:
         # Clean up keys
         self._release_all_keys()
         self.status = "stopped"
-        print("🛑 Bot stopped on Render")
+        print("🛑 Bot stopped")
     
     def _sleep_check(self, duration, action):
         """Sleep while checking if bot should stop"""
@@ -206,7 +199,14 @@ bot = RenderSmashKartsBot()
 
 @app.route('/')
 def index():
-    """Main dashboard"""
+    """Main dashboard - automatically setup browser and game"""
+    # Auto-setup when page loads
+    if bot.status == "idle":
+        try:
+            if bot.setup_browser():
+                bot.navigate_to_game()
+        except:
+            pass
     return render_template('dashboard.html')
 
 @app.route('/api/status')
@@ -219,48 +219,33 @@ def get_status():
         'bot_running': bot.bot_running
     })
 
-@app.route('/api/setup', methods=['POST'])
-def setup_bot():
-    """Setup the bot"""
+@app.route('/api/on_bot', methods=['POST'])
+def on_bot():
+    """ON BOT - Start the bot"""
     try:
-        if bot.setup_browser():
-            if bot.navigate_to_game():
-                return jsonify({'success': True, 'message': 'Bot setup complete!'})
-            else:
-                return jsonify({'success': False, 'message': f'Failed to load game: {bot.last_error}'})
-        else:
-            return jsonify({'success': False, 'message': f'Failed to setup browser: {bot.last_error}'})
-    except Exception as e:
-        return jsonify({'success': False, 'message': str(e)})
-
-@app.route('/api/start', methods=['POST'])
-def start_bot():
-    """Start the bot"""
-    try:
+        # Ensure browser is ready
+        if bot.status == "idle":
+            if not bot.setup_browser():
+                return jsonify({'success': False, 'message': 'Failed to setup browser'})
+            if not bot.navigate_to_game():
+                return jsonify({'success': False, 'message': 'Failed to load game'})
+        
+        # Start the bot
         if bot.start_bot():
-            return jsonify({'success': True, 'message': 'Bot started!'})
+            return jsonify({'success': True, 'message': 'Bot is ON! Cart is moving!'})
         else:
             return jsonify({'success': False, 'message': 'Failed to start bot'})
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)})
 
-@app.route('/api/stop', methods=['POST'])
-def stop_bot():
-    """Stop the bot"""
+@app.route('/api/off_bot', methods=['POST'])
+def off_bot():
+    """OFF BOT - Stop the bot"""
     try:
         if bot.stop_bot():
-            return jsonify({'success': True, 'message': 'Bot stopped!'})
+            return jsonify({'success': True, 'message': 'Bot is OFF! Cart stopped!'})
         else:
             return jsonify({'success': False, 'message': 'Bot was not running'})
-    except Exception as e:
-        return jsonify({'success': False, 'message': str(e)})
-
-@app.route('/api/cleanup', methods=['POST'])
-def cleanup_bot():
-    """Cleanup the bot"""
-    try:
-        bot.cleanup()
-        return jsonify({'success': True, 'message': 'Bot cleaned up!'})
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)})
 

@@ -208,7 +208,7 @@
     <div class="container">
         <div class="header">
             <h1>🎮 Smash Karts Bot</h1>
-            <p>Cloud-powered bot running on Render.com</p>
+            <p>🚗 Click ON BOT to make the cart move automatically!</p>
         </div>
         
         <div class="content">
@@ -224,21 +224,13 @@
             </div>
             
             <div class="controls">
-                <button class="btn btn-primary" id="setupBtn" onclick="setupBot()">
-                    <span class="loading" id="setupLoading" style="display: none;"></span>
-                    Setup Bot
+                <button class="btn btn-success" id="onBotBtn" onclick="onBot()">
+                    <span class="loading" id="onBotLoading" style="display: none;"></span>
+                    🚗 ON BOT
                 </button>
-                <button class="btn btn-success" id="startBtn" onclick="startBot()" disabled>
-                    <span class="loading" id="startLoading" style="display: none;"></span>
-                    Start Bot
-                </button>
-                <button class="btn btn-danger" id="stopBtn" onclick="stopBot()" disabled>
-                    <span class="loading" id="stopLoading" style="display: none;"></span>
-                    Stop Bot
-                </button>
-                <button class="btn btn-warning" id="cleanupBtn" onclick="cleanupBot()">
-                    <span class="loading" id="cleanupLoading" style="display: none;"></span>
-                    Cleanup
+                <button class="btn btn-danger" id="offBotBtn" onclick="offBot()" disabled>
+                    <span class="loading" id="offBotLoading" style="display: none;"></span>
+                    🛑 OFF BOT
                 </button>
             </div>
             
@@ -255,7 +247,7 @@
             
             <div class="log" id="logContainer">
                 <div class="log-entry">
-                    <span class="log-time">[System]</span> Dashboard loaded. Ready to control your Smash Karts bot!
+                    <span class="log-time">[System]</span> 🎮 Smash Karts loaded! Click 🚗 ON BOT to start moving!
                 </div>
             </div>
         </div>
@@ -308,13 +300,11 @@
                     cycleCount.textContent = data.cycle_count;
                     
                     // Update button states
-                    const setupBtn = document.getElementById('setupBtn');
-                    const startBtn = document.getElementById('startBtn');
-                    const stopBtn = document.getElementById('stopBtn');
+                    const onBotBtn = document.getElementById('onBotBtn');
+                    const offBotBtn = document.getElementById('offBotBtn');
                     
-                    setupBtn.disabled = data.status !== 'idle';
-                    startBtn.disabled = data.status !== 'game_loaded' || data.bot_running;
-                    stopBtn.disabled = !data.bot_running;
+                    onBotBtn.disabled = data.bot_running;
+                    offBotBtn.disabled = !data.bot_running;
                     
                     // Update status indicator color
                     statusIndicator.className = `status-indicator status-${data.status}`;
@@ -335,59 +325,30 @@
             }
         }
 
-        function setupBot() {
-            const btn = document.getElementById('setupBtn');
-            const loading = document.getElementById('setupLoading');
-            
-            btn.disabled = true;
-            loading.style.display = 'inline-block';
-            addLogEntry('Setting up bot...');
-            
-            fetch('/api/setup', { method: 'POST' })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        showAlert(data.message, 'success');
-                        addLogEntry('Bot setup completed successfully!');
-                    } else {
-                        showAlert(data.message, 'error');
-                        addLogEntry(`Setup failed: ${data.message}`);
-                    }
-                })
-                .catch(error => {
-                    showAlert('Network error during setup', 'error');
-                    addLogEntry(`Setup error: ${error.message}`);
-                })
-                .finally(() => {
-                    btn.disabled = false;
-                    loading.style.display = 'none';
-                });
-        }
-
-        function startBot() {
-            const btn = document.getElementById('startBtn');
-            const loading = document.getElementById('startLoading');
+        function onBot() {
+            const btn = document.getElementById('onBotBtn');
+            const loading = document.getElementById('onBotLoading');
             
             btn.disabled = true;
             loading.style.display = 'inline-block';
             startTime = new Date();
-            addLogEntry('Starting bot...');
+            addLogEntry('🚗 Turning ON bot...');
             
-            fetch('/api/start', { method: 'POST' })
+            fetch('/api/on_bot', { method: 'POST' })
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
                         showAlert(data.message, 'success');
-                        addLogEntry('Bot started successfully!');
+                        addLogEntry('✅ Bot is ON! Cart is moving!');
                     } else {
                         showAlert(data.message, 'error');
-                        addLogEntry(`Start failed: ${data.message}`);
+                        addLogEntry(`❌ Failed to turn ON: ${data.message}`);
                         startTime = null;
                     }
                 })
                 .catch(error => {
-                    showAlert('Network error starting bot', 'error');
-                    addLogEntry(`Start error: ${error.message}`);
+                    showAlert('Network error turning ON bot', 'error');
+                    addLogEntry(`❌ ON error: ${error.message}`);
                     startTime = null;
                 })
                 .finally(() => {
@@ -396,59 +357,29 @@
                 });
         }
 
-        function stopBot() {
-            const btn = document.getElementById('stopBtn');
-            const loading = document.getElementById('stopLoading');
+        function offBot() {
+            const btn = document.getElementById('offBotBtn');
+            const loading = document.getElementById('offBotLoading');
             
             btn.disabled = true;
             loading.style.display = 'inline-block';
-            addLogEntry('Stopping bot...');
+            addLogEntry('🛑 Turning OFF bot...');
             
-            fetch('/api/stop', { method: 'POST' })
+            fetch('/api/off_bot', { method: 'POST' })
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
                         showAlert(data.message, 'success');
-                        addLogEntry('Bot stopped successfully!');
+                        addLogEntry('✅ Bot is OFF! Cart stopped!');
                         startTime = null;
                     } else {
                         showAlert(data.message, 'error');
-                        addLogEntry(`Stop failed: ${data.message}`);
+                        addLogEntry(`❌ Failed to turn OFF: ${data.message}`);
                     }
                 })
                 .catch(error => {
-                    showAlert('Network error stopping bot', 'error');
-                    addLogEntry(`Stop error: ${error.message}`);
-                })
-                .finally(() => {
-                    btn.disabled = false;
-                    loading.style.display = 'none';
-                });
-        }
-
-        function cleanupBot() {
-            const btn = document.getElementById('cleanupBtn');
-            const loading = document.getElementById('cleanupLoading');
-            
-            btn.disabled = true;
-            loading.style.display = 'inline-block';
-            addLogEntry('Cleaning up bot...');
-            
-            fetch('/api/cleanup', { method: 'POST' })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        showAlert(data.message, 'success');
-                        addLogEntry('Bot cleaned up successfully!');
-                        startTime = null;
-                    } else {
-                        showAlert(data.message, 'error');
-                        addLogEntry(`Cleanup failed: ${data.message}`);
-                    }
-                })
-                .catch(error => {
-                    showAlert('Network error during cleanup', 'error');
-                    addLogEntry(`Cleanup error: ${error.message}`);
+                    showAlert('Network error turning OFF bot', 'error');
+                    addLogEntry(`❌ OFF error: ${error.message}`);
                 })
                 .finally(() => {
                     btn.disabled = false;
