@@ -24,31 +24,42 @@ class SmashKartsRenderBot:
         self.start_time = None
         
     def setup_browser(self):
-        """Setup Chrome browser for Render.com headless operation"""
+        """Setup Chrome browser for Render.com operation"""
         chrome_options = Options()
         
-        # Render.com headless setup
-        chrome_options.add_argument("--headless")
-        chrome_options.add_argument("--no-sandbox")
-        chrome_options.add_argument("--disable-dev-shm-usage")
-        chrome_options.add_argument("--disable-gpu")
-        chrome_options.add_argument("--window-size=1920,1080")
+        # Create a separate profile for the bot to avoid conflicts
+        temp_profile = os.path.join(os.getcwd(), "bot_profile")
+        chrome_options.add_argument(f"--user-data-dir={temp_profile}")
+        
+        # Anti-detection measures
         chrome_options.add_argument("--disable-blink-features=AutomationControlled")
         chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
         chrome_options.add_experimental_option('useAutomationExtension', False)
         
-        # Additional options for Render
+        # Performance and stealth options
+        chrome_options.add_argument("--no-sandbox")
+        chrome_options.add_argument("--disable-dev-shm-usage")
+        chrome_options.add_argument("--disable-gpu")
+        chrome_options.add_argument("--disable-logging")
         chrome_options.add_argument("--disable-extensions")
         chrome_options.add_argument("--disable-web-security")
-        chrome_options.add_argument("--allow-running-insecure-content")
-        chrome_options.add_argument("--disable-features=VizDisplayCompositor")
         
-        print("🌐 Starting headless browser on Render...")
+        # Use a different port to avoid conflicts
+        chrome_options.add_argument("--remote-debugging-port=9223")
+        
+        # For Render.com, we need headless but with better compatibility
+        chrome_options.add_argument("--headless")
+        chrome_options.add_argument("--window-size=1920,1080")
+        
+        print("🌐 Starting browser on Render...")
         try:
             self.driver = webdriver.Chrome(options=chrome_options)
+            
+            # Hide automation indicators
             self.driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
+            
             self.status = "browser_ready"
-            print("✅ Headless browser started on Render!")
+            print("✅ Browser started on Render!")
             return True
             
         except Exception as e:
@@ -57,22 +68,30 @@ class SmashKartsRenderBot:
             return False
     
     def navigate_to_game(self, url="https://smashkarts.io/"):
-        """Navigate to the game automatically"""
+        """Navigate to game and prepare for bot"""
         if not self.driver:
             return False
             
         try:
-            print(f"🎮 Navigating to {url}...")
+            print(f"🎮 Opening {url}...")
             self.driver.get(url)
             time.sleep(5)
             
-            # Wait for page to load
-            WebDriverWait(self.driver, 15).until(
-                EC.presence_of_element_located((By.TAG_NAME, "body"))
-            )
+            # Focus on game - try different selectors like your working code
+            try:
+                for selector in ["canvas", "#game", ".game", "iframe", "body"]:
+                    try:
+                        element = self.driver.find_element(By.CSS_SELECTOR, selector)
+                        element.click()
+                        print(f"✅ Focused on {selector}")
+                        break
+                    except:
+                        continue
+            except:
+                print("⚠️ Could not focus game, but continuing...")
             
             self.status = "game_loaded"
-            print("✅ Game loaded!")
+            print("✅ Game loaded and focused!")
             return True
             
         except Exception as e:
@@ -99,72 +118,71 @@ class SmashKartsRenderBot:
             return False
     
     def bot_cycle(self):
-        """Main bot movement cycle using JavaScript keyboard events"""
-        print("🤖 Bot started on Render! Running movement pattern with JavaScript...")
+        """Main bot movement cycle using your proven approach"""
+        print("🤖 Bot started! Running movement pattern...")
         self.status = "running"
         self.start_time = time.time()
         
-        # Focus on the iframe first
+        # Get the body element to send keys to (like your working code)
         try:
-            self._focus_iframe()
-            time.sleep(1)
-            print("✅ Focused on game iframe")
+            body = self.driver.find_element(By.TAG_NAME, "body")
+            actions = ActionChains(self.driver)
+            print("✅ Got body element and ActionChains ready")
         except Exception as e:
-            print(f"⚠️ Could not focus iframe: {e}")
+            print(f"❌ Error getting body element: {e}")
+            return
         
         try:
             while self.bot_running:
                 try:
                     self.cycle_count += 1
-                    print(f"🔄 Render Cycle {self.cycle_count}")
+                    print(f"🔄 Cycle {self.cycle_count}")
                     
                     # 1. Hold Up for 5 seconds
-                    self._send_key_event('keydown', 'ArrowUp')
+                    actions.key_down(Keys.ARROW_UP).perform()
                     if not self._sleep_check(5, "Up"):
                         break
                     
                     # 2. Up+Left for 5 seconds
-                    self._send_key_event('keydown', 'ArrowLeft')
+                    actions.key_down(Keys.ARROW_LEFT).perform()
                     if not self._sleep_check(5, "Up+Left"):
                         break
-                    self._send_key_event('keyup', 'ArrowLeft')
+                    actions.key_up(Keys.ARROW_LEFT).perform()
                     
                     # 3. Up+Right for 5 seconds
-                    self._send_key_event('keydown', 'ArrowRight')
+                    actions.key_down(Keys.ARROW_RIGHT).perform()
                     if not self._sleep_check(5, "Up+Right"):
                         break
-                    self._send_key_event('keyup', 'ArrowRight')
+                    actions.key_up(Keys.ARROW_RIGHT).perform()
                     
                     # 4. Space
-                    self._send_key_event('keydown', 'Space')
-                    self._send_key_event('keyup', 'Space')
+                    actions.key_down(Keys.SPACE).key_up(Keys.SPACE).perform()
                     if not self._sleep_check(0.5, "Space"):
                         break
                     
                     # 5. Down for 5 seconds
-                    self._send_key_event('keyup', 'ArrowUp')
-                    self._send_key_event('keydown', 'ArrowDown')
+                    actions.key_up(Keys.ARROW_UP).perform()
+                    actions.key_down(Keys.ARROW_DOWN).perform()
                     if not self._sleep_check(5, "Down"):
                         break
                     
                     # 6. Down+Left for 5 seconds
-                    self._send_key_event('keydown', 'ArrowLeft')
+                    actions.key_down(Keys.ARROW_LEFT).perform()
                     if not self._sleep_check(5, "Down+Left"):
                         break
-                    self._send_key_event('keyup', 'ArrowLeft')
+                    actions.key_up(Keys.ARROW_LEFT).perform()
                     
                     # 7. Down+Right for 5 seconds
-                    self._send_key_event('keydown', 'ArrowRight')
+                    actions.key_down(Keys.ARROW_RIGHT).perform()
                     if not self._sleep_check(5, "Down+Right"):
                         break
-                    self._send_key_event('keyup', 'ArrowRight')
+                    actions.key_up(Keys.ARROW_RIGHT).perform()
                     
                     # 8. Space
-                    self._send_key_event('keydown', 'Space')
-                    self._send_key_event('keyup', 'Space')
+                    actions.key_down(Keys.SPACE).key_up(Keys.SPACE).perform()
                     
                     # Reset for next cycle
-                    self._send_key_event('keyup', 'ArrowDown')
+                    actions.key_up(Keys.ARROW_DOWN).perform()
                     
                 except Exception as e:
                     self.last_error = str(e)
@@ -178,111 +196,9 @@ class SmashKartsRenderBot:
         # Clean up keys
         self._release_all_keys()
         self.status = "stopped"
-        print("🛑 Bot stopped on Render")
+        print("🛑 Bot stopped")
     
-    def _send_key_event(self, event_type, key):
-        """Send keyboard event using multiple methods for better compatibility"""
-        try:
-            # Method 1: Try ActionChains first (most reliable)
-            actions = ActionChains(self.driver)
-            
-            if event_type == 'keydown':
-                if key == 'ArrowUp':
-                    actions.key_down(Keys.ARROW_UP)
-                elif key == 'ArrowDown':
-                    actions.key_down(Keys.ARROW_DOWN)
-                elif key == 'ArrowLeft':
-                    actions.key_down(Keys.ARROW_LEFT)
-                elif key == 'ArrowRight':
-                    actions.key_down(Keys.ARROW_RIGHT)
-                elif key == 'Space':
-                    actions.key_down(Keys.SPACE)
-            elif event_type == 'keyup':
-                if key == 'ArrowUp':
-                    actions.key_up(Keys.ARROW_UP)
-                elif key == 'ArrowDown':
-                    actions.key_up(Keys.ARROW_DOWN)
-                elif key == 'ArrowLeft':
-                    actions.key_up(Keys.ARROW_LEFT)
-                elif key == 'ArrowRight':
-                    actions.key_up(Keys.ARROW_RIGHT)
-                elif key == 'Space':
-                    actions.key_up(Keys.SPACE)
-            
-            actions.perform()
-            print(f"✅ Sent {event_type} event for {key} via ActionChains")
-            
-        except Exception as e:
-            print(f"⚠️ ActionChains failed for {event_type} {key}: {e}")
-            # Method 2: Fallback to JavaScript
-            try:
-                js_code = f"""
-                // Get the iframe
-                var iframe = document.querySelector('iframe');
-                if (iframe && iframe.contentDocument) {{
-                    // Send event to iframe content
-                    var event = new KeyboardEvent('{event_type}', {{
-                        key: '{key}',
-                        code: '{key}',
-                        keyCode: {self._get_key_code(key)},
-                        which: {self._get_key_code(key)},
-                        bubbles: true,
-                        cancelable: true
-                    }});
-                    iframe.contentDocument.dispatchEvent(event);
-                    console.log('Sent {event_type} event for {key} to iframe');
-                }} else {{
-                    // Fallback: send to main document
-                    var event = new KeyboardEvent('{event_type}', {{
-                        key: '{key}',
-                        code: '{key}',
-                        keyCode: {self._get_key_code(key)},
-                        which: {self._get_key_code(key)},
-                        bubbles: true,
-                        cancelable: true
-                    }});
-                    document.dispatchEvent(event);
-                    console.log('Sent {event_type} event for {key} to main document');
-                }}
-                """
-                self.driver.execute_script(js_code)
-                print(f"✅ Sent {event_type} event for {key} via JavaScript")
-            except Exception as js_error:
-                print(f"❌ Both methods failed for {event_type} {key}: {js_error}")
-    
-    def _get_key_code(self, key):
-        """Get key code for JavaScript events"""
-        key_codes = {
-            'ArrowUp': 38,
-            'ArrowDown': 40,
-            'ArrowLeft': 37,
-            'ArrowRight': 39,
-            'Space': 32
-        }
-        return key_codes.get(key, 0)
-    
-    def _focus_iframe(self):
-        """Focus on the game iframe and switch context"""
-        try:
-            # Switch to iframe context
-            iframe = self.driver.find_element(By.TAG_NAME, "iframe")
-            self.driver.switch_to.frame(iframe)
-            print("✅ Switched to iframe context")
-            
-            # Focus on the iframe content
-            js_code = """
-            document.body.focus();
-            console.log('Focused on iframe content');
-            """
-            self.driver.execute_script(js_code)
-            
-        except Exception as e:
-            print(f"⚠️ Error focusing iframe: {e}")
-            # Try to switch back to default content
-            try:
-                self.driver.switch_to.default_content()
-            except:
-                pass
+    # Removed complex iframe methods - using your proven approach instead
     
     def _sleep_check(self, duration, action):
         """Sleep while checking if bot should stop"""
@@ -294,24 +210,15 @@ class SmashKartsRenderBot:
         return True
     
     def _release_all_keys(self):
-        """Release all keys using ActionChains"""
+        """Release all keys using ActionChains (like your working code)"""
         try:
             actions = ActionChains(self.driver)
-            actions.key_up(Keys.ARROW_UP)
-            actions.key_up(Keys.ARROW_DOWN)
-            actions.key_up(Keys.ARROW_LEFT)
-            actions.key_up(Keys.ARROW_RIGHT)
-            actions.key_up(Keys.SPACE)
+            for key in [Keys.ARROW_UP, Keys.ARROW_DOWN, Keys.ARROW_LEFT, Keys.ARROW_RIGHT, Keys.SPACE]:
+                actions.key_up(key)
             actions.perform()
             print("✅ Released all keys")
-        except Exception as e:
-            print(f"⚠️ Error releasing keys: {e}")
-            # Fallback to JavaScript
-            try:
-                for key in ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space']:
-                    self._send_key_event('keyup', key)
-            except:
-                pass
+        except:
+            pass
     
     def start_bot(self):
         """Start the bot"""
