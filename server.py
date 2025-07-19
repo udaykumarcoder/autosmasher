@@ -67,28 +67,45 @@ class SmashKartsRenderBot:
             print(f"❌ Error starting browser: {e}")
             return False
     
-    def navigate_to_game(self, url="https://smashkarts.io/"):
-        """Navigate to game and prepare for bot"""
+    def navigate_to_game(self, url=None):
+        """Navigate to our web page with embedded game"""
         if not self.driver:
             return False
+        
+        # Get the correct URL for the environment
+        if url is None:
+            # Check if we're on Render.com
+            render_url = os.environ.get('RENDER_EXTERNAL_URL')
+            if render_url:
+                url = render_url
+            else:
+                url = "http://localhost:5000/"
             
         try:
-            print(f"🎮 Opening {url}...")
+            print(f"🎮 Opening our web page at {url}...")
             self.driver.get(url)
             time.sleep(5)
             
-            # Focus on game - try different selectors like your working code
+            # Wait for the iframe to load
             try:
-                for selector in ["canvas", "#game", ".game", "iframe", "body"]:
-                    try:
-                        element = self.driver.find_element(By.CSS_SELECTOR, selector)
-                        element.click()
-                        print(f"✅ Focused on {selector}")
-                        break
-                    except:
-                        continue
-            except:
-                print("⚠️ Could not focus game, but continuing...")
+                iframe = WebDriverWait(self.driver, 15).until(
+                    EC.presence_of_element_located((By.TAG_NAME, "iframe"))
+                )
+                print("✅ Found embedded game iframe")
+                
+                # Switch to iframe context
+                self.driver.switch_to.frame(iframe)
+                print("✅ Switched to iframe context")
+                
+                # Focus on the game content
+                body = self.driver.find_element(By.TAG_NAME, "body")
+                body.click()
+                print("✅ Focused on game content")
+                
+            except Exception as e:
+                print(f"⚠️ Could not switch to iframe: {e}")
+                # Stay on main page as fallback
+                self.driver.switch_to.default_content()
             
             self.status = "game_loaded"
             print("✅ Game loaded and focused!")
@@ -123,31 +140,14 @@ class SmashKartsRenderBot:
         self.status = "running"
         self.start_time = time.time()
         
-        # Switch to iframe context first and focus
+        # Get the body element to send keys to (EXACTLY like your working code)
         try:
-            iframe = self.driver.find_element(By.TAG_NAME, "iframe")
-            self.driver.switch_to.frame(iframe)
-            print("✅ Switched to iframe context")
-            
-            # Focus on the iframe content
-            self._focus_iframe()
-            time.sleep(1)
-            
-            # Get the body element inside iframe
             body = self.driver.find_element(By.TAG_NAME, "body")
             actions = ActionChains(self.driver)
-            print("✅ Got iframe body element and ActionChains ready")
+            print("✅ Got body element and ActionChains ready")
         except Exception as e:
-            print(f"❌ Error switching to iframe: {e}")
-            # Fallback to main page
-            try:
-                self.driver.switch_to.default_content()
-                body = self.driver.find_element(By.TAG_NAME, "body")
-                actions = ActionChains(self.driver)
-                print("✅ Got main page body element and ActionChains ready")
-            except Exception as e2:
-                print(f"❌ Error getting body element: {e2}")
-                return
+            print(f"❌ Error getting body element: {e}")
+            return
         
         try:
             while self.bot_running:
@@ -156,92 +156,50 @@ class SmashKartsRenderBot:
                     print(f"🔄 Cycle {self.cycle_count}")
                     
                     # 1. Hold Up for 5 seconds
-                    try:
-                        actions.key_down(Keys.ARROW_UP).perform()
-                    except:
-                        self._send_key_to_iframe('ArrowUp', 'keydown')
+                    actions.key_down(Keys.ARROW_UP).perform()
                     if not self._sleep_check(5, "Up"):
                         break
                     
                     # 2. Up+Left for 5 seconds
-                    try:
-                        actions.key_down(Keys.ARROW_LEFT).perform()
-                    except:
-                        self._send_key_to_iframe('ArrowLeft', 'keydown')
+                    actions.key_down(Keys.ARROW_LEFT).perform()
                     if not self._sleep_check(5, "Up+Left"):
                         break
-                    try:
-                        actions.key_up(Keys.ARROW_LEFT).perform()
-                    except:
-                        self._send_key_to_iframe('ArrowLeft', 'keyup')
+                    actions.key_up(Keys.ARROW_LEFT).perform()
                     
                     # 3. Up+Right for 5 seconds
-                    try:
-                        actions.key_down(Keys.ARROW_RIGHT).perform()
-                    except:
-                        self._send_key_to_iframe('ArrowRight', 'keydown')
+                    actions.key_down(Keys.ARROW_RIGHT).perform()
                     if not self._sleep_check(5, "Up+Right"):
                         break
-                    try:
-                        actions.key_up(Keys.ARROW_RIGHT).perform()
-                    except:
-                        self._send_key_to_iframe('ArrowRight', 'keyup')
+                    actions.key_up(Keys.ARROW_RIGHT).perform()
                     
                     # 4. Space
-                    try:
-                        actions.key_down(Keys.SPACE).key_up(Keys.SPACE).perform()
-                    except:
-                        self._send_key_to_iframe('Space', 'keydown')
-                        self._send_key_to_iframe('Space', 'keyup')
+                    actions.key_down(Keys.SPACE).key_up(Keys.SPACE).perform()
                     if not self._sleep_check(0.5, "Space"):
                         break
                     
                     # 5. Down for 5 seconds
-                    try:
-                        actions.key_up(Keys.ARROW_UP).perform()
-                        actions.key_down(Keys.ARROW_DOWN).perform()
-                    except:
-                        self._send_key_to_iframe('ArrowUp', 'keyup')
-                        self._send_key_to_iframe('ArrowDown', 'keydown')
+                    actions.key_up(Keys.ARROW_UP).perform()
+                    actions.key_down(Keys.ARROW_DOWN).perform()
                     if not self._sleep_check(5, "Down"):
                         break
                     
                     # 6. Down+Left for 5 seconds
-                    try:
-                        actions.key_down(Keys.ARROW_LEFT).perform()
-                    except:
-                        self._send_key_to_iframe('ArrowLeft', 'keydown')
+                    actions.key_down(Keys.ARROW_LEFT).perform()
                     if not self._sleep_check(5, "Down+Left"):
                         break
-                    try:
-                        actions.key_up(Keys.ARROW_LEFT).perform()
-                    except:
-                        self._send_key_to_iframe('ArrowLeft', 'keyup')
+                    actions.key_up(Keys.ARROW_LEFT).perform()
                     
                     # 7. Down+Right for 5 seconds
-                    try:
-                        actions.key_down(Keys.ARROW_RIGHT).perform()
-                    except:
-                        self._send_key_to_iframe('ArrowRight', 'keydown')
+                    actions.key_down(Keys.ARROW_RIGHT).perform()
                     if not self._sleep_check(5, "Down+Right"):
                         break
-                    try:
-                        actions.key_up(Keys.ARROW_RIGHT).perform()
-                    except:
-                        self._send_key_to_iframe('ArrowRight', 'keyup')
+                    actions.key_up(Keys.ARROW_RIGHT).perform()
                     
                     # 8. Space
-                    try:
-                        actions.key_down(Keys.SPACE).key_up(Keys.SPACE).perform()
-                    except:
-                        self._send_key_to_iframe('Space', 'keydown')
-                        self._send_key_to_iframe('Space', 'keyup')
+                    actions.key_down(Keys.SPACE).key_up(Keys.SPACE).perform()
                     
                     # Reset for next cycle
-                    try:
-                        actions.key_up(Keys.ARROW_DOWN).perform()
-                    except:
-                        self._send_key_to_iframe('ArrowDown', 'keyup')
+                    actions.key_up(Keys.ARROW_DOWN).perform()
                     
                 except Exception as e:
                     self.last_error = str(e)
@@ -257,55 +215,7 @@ class SmashKartsRenderBot:
         self.status = "stopped"
         print("🛑 Bot stopped")
     
-    def _focus_iframe(self):
-        """Focus on the iframe content"""
-        try:
-            # Switch to iframe
-            iframe = self.driver.find_element(By.TAG_NAME, "iframe")
-            self.driver.switch_to.frame(iframe)
-            
-            # Focus on the iframe content
-            body = self.driver.find_element(By.TAG_NAME, "body")
-            body.click()
-            print("✅ Focused on iframe content")
-            
-        except Exception as e:
-            print(f"⚠️ Error focusing iframe: {e}")
-            # Switch back to main content
-            try:
-                self.driver.switch_to.default_content()
-            except:
-                pass
-    
-    def _send_key_to_iframe(self, key, action_type="keydown"):
-        """Send keyboard event directly to iframe using JavaScript"""
-        try:
-            js_code = f"""
-            var event = new KeyboardEvent('{action_type}', {{
-                key: '{key}',
-                code: '{key}',
-                keyCode: {self._get_key_code(key)},
-                which: {self._get_key_code(key)},
-                bubbles: true,
-                cancelable: true
-            }});
-            document.dispatchEvent(event);
-            """
-            self.driver.execute_script(js_code)
-            print(f"✅ Sent {action_type} event for {key} via JavaScript")
-        except Exception as e:
-            print(f"❌ Error sending JavaScript key event: {e}")
-    
-    def _get_key_code(self, key):
-        """Get key code for JavaScript events"""
-        key_codes = {
-            'ArrowUp': 38,
-            'ArrowDown': 40,
-            'ArrowLeft': 37,
-            'ArrowRight': 39,
-            'Space': 32
-        }
-        return key_codes.get(key, 0)
+    # Removed complex iframe methods - using simple ActionChains like working code
     
     def _sleep_check(self, duration, action):
         """Sleep while checking if bot should stop"""
