@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smash Karts Bot - Play & Auto-Run</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+            color: white;
+            padding: 20px;
+            text-align: center;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+        }
+        
+        .header h1 {
+            font-size: 2em;
+            margin-bottom: 5px;
+        }
+        
+        .header p {
+            font-size: 1em;
+            opacity: 0.9;
+        }
+        
+        .game-container {
+            margin-top: 100px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .game-frame {
+            width: 100%;
+            max-width: 1200px;
+            height: 600px;
+            border: 3px solid #fff;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            background: #000;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .game-frame iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            border-radius: 12px;
+        }
+        
+        .controls {
+            margin-top: 20px;
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #007bff, #0056b3);
+            color: white;
+        }
+        
+        .btn-success {
+            background: linear-gradient(135deg, #28a745, #1e7e34);
+            color: white;
+        }
+        
+        .btn-danger {
+            background: linear-gradient(135deg, #dc3545, #c82333);
+            color: white;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .status-panel {
+            position: fixed;
+            top: 100px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            min-width: 250px;
+            z-index: 999;
+        }
+        
+        .status-card {
+            margin-bottom: 15px;
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 10px;
+        }
+        
+        .status-idle { background: #6c757d; }
+        .status-starting { background: #fd7e14; }
+        .status-waiting_for_user { background: #ffc107; }
+        .status-user_ready { background: #17a2b8; }
+        .status-running { background: #28a745; }
+        .status-stopped { background: #dc3545; }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .stat-card {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 10px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 1.2em;
+            font-weight: bold;
+            margin-bottom: 2px;
+        }
+        
+        .stat-label {
+            font-size: 0.8em;
+            opacity: 0.9;
+        }
+        
+        .instructions {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 20px;
+            margin: 20px auto;
+            max-width: 800px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        
+        .instructions h3 {
+            color: #333;
+            margin-bottom: 15px;
+        }
+        
+        .instructions ol {
+            color: #555;
+            line-height: 1.6;
+        }
+        
+        .instructions li {
+            margin-bottom: 8px;
+        }
+        
+        .alert {
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            display: none;
+        }
+        
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .alert-danger {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .loading {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #007bff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 8px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        @media (max-width: 768px) {
+            .status-panel {
+                position: static;
+                margin: 20px auto;
+                max-width: 300px;
+            }
+            
+            .game-frame {
+                height: 400px;
+            }
+            
+            .controls {
+                flex-direction: column;
+                align-items: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🎮 Smash Karts Bot</h1>
+        <p>Play the game, then let the bot take over!</p>
+    </div>
+    
+    <div class="status-panel">
+        <div class="alert alert-success" id="successAlert"></div>
+        <div class="alert alert-danger" id="errorAlert"></div>
+        
+        <div class="status-card">
+            <h4>Bot Status</h4>
+            <p>
+                <span class="status-indicator status-idle" id="statusIndicator"></span>
+                <span id="statusText">Idle</span>
+            </p>
+        </div>
+        
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-value" id="cycleCount">0</div>
+                <div class="stat-label">Cycles</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="uptime">00:00</div>
+                <div class="stat-label">Uptime</div>
+            </div>
+        </div>
+        
+        <div class="controls">
+            <button class="btn btn-primary" id="startBtn" onclick="startBot()">
+                <span class="loading" id="startLoading" style="display: none;"></span>
+                🚀 Start Bot
+            </button>
+            <button class="btn btn-success" id="readyBtn" onclick="userReady()" disabled>
+                <span class="loading" id="readyLoading" style="display: none;"></span>
+                ✅ I'm Ready
+            </button>
+            <button class="btn btn-danger" id="stopBtn" onclick="stopBot()" disabled>
+                <span class="loading" id="stopLoading" style="display: none;"></span>
+                ⏹ Stop Bot
+            </button>
+        </div>
+    </div>
+    
+    <div class="game-container">
+        <div class="instructions">
+            <h3>🎯 How to Use:</h3>
+            <ol>
+                <li><strong>Play the game</strong> - Use the embedded Smash Karts below</li>
+                <li><strong>Sign in</strong> - Use Google or any method you prefer</li>
+                <li><strong>Join a game</strong> - Get into an actual match</li>
+                <li><strong>Click "Start Bot"</strong> - This starts the bot in the background</li>
+                <li><strong>Click "I'm Ready"</strong> - When you're in a game and want the bot to take over</li>
+                <li><strong>Watch the magic!</strong> - The bot will play automatically</li>
+            </ol>
+        </div>
+        
+        <div class="game-frame">
+            <iframe src="https://smashkarts.io/" allowfullscreen></iframe>
+        </div>
+    </div>
+
+    <script>
+        let startTime = null;
+        let statusInterval = null;
+        let uptimeInterval = null;
+
+        // Initialize dashboard
+        document.addEventListener('DOMContentLoaded', function() {
+            updateStatus();
+            statusInterval = setInterval(updateStatus, 2000);
+            uptimeInterval = setInterval(updateUptime, 1000);
+        });
+
+        function showAlert(message, type) {
+            const alert = document.getElementById(type === 'success' ? 'successAlert' : 'errorAlert');
+            alert.textContent = message;
+            alert.style.display = 'block';
+            setTimeout(() => {
+                alert.style.display = 'none';
+            }, 5000);
+        }
+
+        function updateStatus() {
+            fetch('/api/status')
+                .then(response => response.json())
+                .then(data => {
+                    const statusIndicator = document.getElementById('statusIndicator');
+                    const statusText = document.getElementById('statusText');
+                    const cycleCount = document.getElementById('cycleCount');
+                    const startBtn = document.getElementById('startBtn');
+                    const readyBtn = document.getElementById('readyBtn');
+                    const stopBtn = document.getElementById('stopBtn');
+                    
+                    // Update status
+                    statusIndicator.className = `status-indicator status-${data.status}`;
+                    statusText.textContent = data.status.replace('_', ' ').toUpperCase();
+                    
+                    // Update cycle count
+                    cycleCount.textContent = data.cycle_count;
+                    
+                    // Update button states
+                    startBtn.disabled = data.status !== 'idle';
+                    readyBtn.disabled = data.status !== 'waiting_for_user';
+                    stopBtn.disabled = !data.bot_running;
+                    
+                    // Update status indicator color
+                    statusIndicator.className = `status-indicator status-${data.status}`;
+                })
+                .catch(error => {
+                    console.error('Error updating status:', error);
+                });
+        }
+
+        function updateUptime() {
+            if (startTime) {
+                const now = new Date();
+                const diff = Math.floor((now - startTime) / 1000);
+                const minutes = Math.floor(diff / 60);
+                const seconds = diff % 60;
+                document.getElementById('uptime').textContent = 
+                    `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            }
+        }
+
+        function startBot() {
+            const btn = document.getElementById('startBtn');
+            const loading = document.getElementById('startLoading');
+            
+            btn.disabled = true;
+            loading.style.display = 'inline-block';
+            
+            fetch('/api/start_bot', { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showAlert(data.message, 'success');
+                    } else {
+                        showAlert(data.message, 'error');
+                    }
+                })
+                .catch(error => {
+                    showAlert('Network error starting bot', 'error');
+                })
+                .finally(() => {
+                    btn.disabled = false;
+                    loading.style.display = 'none';
+                });
+        }
+
+        function userReady() {
+            const btn = document.getElementById('readyBtn');
+            const loading = document.getElementById('readyLoading');
+            
+            btn.disabled = true;
+            loading.style.display = 'inline-block';
+            startTime = new Date();
+            
+            fetch('/api/user_ready', { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showAlert(data.message, 'success');
+                    } else {
+                        showAlert(data.message, 'error');
+                        startTime = null;
+                    }
+                })
+                .catch(error => {
+                    showAlert('Network error signaling ready', 'error');
+                    startTime = null;
+                })
+                .finally(() => {
+                    btn.disabled = false;
+                    loading.style.display = 'none';
+                });
+        }
+
+        function stopBot() {
+            const btn = document.getElementById('stopBtn');
+            const loading = document.getElementById('stopLoading');
+            
+            btn.disabled = true;
+            loading.style.display = 'inline-block';
+            
+            fetch('/api/stop', { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showAlert(data.message, 'success');
+                        startTime = null;
+                    } else {
+                        showAlert(data.message, 'error');
+                    }
+                })
+                .catch(error => {
+                    showAlert('Network error stopping bot', 'error');
+                })
+                .finally(() => {
+                    btn.disabled = false;
+                    loading.style.display = 'none';
+                });
+        }
+    </script>
+</body>
+</html> 

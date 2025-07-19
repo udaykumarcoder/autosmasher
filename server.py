@@ -71,11 +71,8 @@ class SmashKartsRenderBot:
                 EC.presence_of_element_located((By.TAG_NAME, "body"))
             )
             
-            # Try to automatically join a game
-            self.auto_join_game()
-            
             self.status = "game_loaded"
-            print("✅ Game loaded and joined!")
+            print("✅ Game loaded!")
             return True
             
         except Exception as e:
@@ -83,68 +80,23 @@ class SmashKartsRenderBot:
             print(f"❌ Error loading game: {e}")
             return False
     
-    def auto_join_game(self):
-        """Automatically join a game without manual input"""
+    def wait_for_user_ready(self):
+        """Wait for user to be ready in the game"""
         try:
-            print("🎯 Attempting to auto-join game...")
+            print("⏳ Waiting for user to be ready in game...")
+            self.status = "waiting_for_user"
             
-            # Wait for game to load
-            time.sleep(3)
+            # Wait for user to signal they're ready
+            # This will be triggered by the web interface
+            while self.status == "waiting_for_user":
+                time.sleep(1)
             
-            # Try to find and click play buttons
-            play_selectors = [
-                "button:contains('Play')",
-                "button:contains('Start')",
-                "button:contains('Join')",
-                ".play-button",
-                ".start-button",
-                ".join-button",
-                "[data-testid='play']",
-                "[data-testid='start']",
-                "[data-testid='join']"
-            ]
-            
-            for selector in play_selectors:
-                try:
-                    element = WebDriverWait(self.driver, 5).until(
-                        EC.element_to_be_clickable((By.CSS_SELECTOR, selector))
-                    )
-                    print(f"✅ Found play button: {selector}")
-                    element.click()
-                    time.sleep(2)
-                    break
-                except:
-                    continue
-            
-            # Try to find and click mode selection
-            mode_selectors = [
-                "button:contains('Free For All')",
-                "button:contains('FFA')",
-                "button:contains('Team Deathmatch')",
-                "button:contains('TDM')",
-                ".mode-button",
-                "[data-mode]"
-            ]
-            
-            for selector in mode_selectors:
-                try:
-                    element = WebDriverWait(self.driver, 3).until(
-                        EC.element_to_be_clickable((By.CSS_SELECTOR, selector))
-                    )
-                    print(f"✅ Found mode button: {selector}")
-                    element.click()
-                    time.sleep(2)
-                    break
-                except:
-                    continue
-            
-            # Wait for game to actually start
-            time.sleep(5)
-            print("✅ Auto-join completed!")
+            return True
             
         except Exception as e:
-            print(f"⚠️ Auto-join had issues: {e}")
-            # Continue anyway - the bot will still work
+            self.last_error = str(e)
+            print(f"❌ Error waiting for user: {e}")
+            return False
     
     def bot_cycle(self):
         """Main bot movement cycle"""
@@ -285,6 +237,10 @@ def start_bot_automatically():
         if not bot.navigate_to_game():
             return False
         
+        # Wait for user to be ready
+        if not bot.wait_for_user_ready():
+            return False
+        
         # Start bot
         if not bot.start_bot():
             return False
@@ -298,25 +254,49 @@ def start_bot_automatically():
 
 @app.route('/')
 def index():
-    """Main page - triggers bot when visited"""
-    return render_template('trigger.html')
+    """Main page - shows Smash Karts embedded"""
+    return render_template('game_embedded.html')
 
-@app.route('/api/trigger', methods=['POST'])
-def trigger_bot():
-    """API endpoint to trigger bot"""
+@app.route('/api/start_bot', methods=['POST'])
+def start_bot():
+    """API endpoint to start the bot"""
     try:
         if bot.status == "idle":
             # Start bot in background thread
             threading.Thread(target=start_bot_automatically, daemon=True).start()
             return jsonify({
                 'success': True, 
-                'message': 'Bot triggered! Starting automatically...',
+                'message': 'Bot starting in background...',
                 'status': 'starting'
             })
         else:
             return jsonify({
                 'success': False, 
                 'message': f'Bot is already {bot.status}',
+                'status': bot.status
+            })
+    except Exception as e:
+        return jsonify({
+            'success': False, 
+            'message': str(e),
+            'status': 'error'
+        })
+
+@app.route('/api/user_ready', methods=['POST'])
+def user_ready():
+    """API endpoint to signal user is ready"""
+    try:
+        if bot.status == "waiting_for_user":
+            bot.status = "user_ready"
+            return jsonify({
+                'success': True, 
+                'message': 'User ready! Starting bot...',
+                'status': 'user_ready'
+            })
+        else:
+            return jsonify({
+                'success': False, 
+                'message': f'Bot is not waiting for user (status: {bot.status})',
                 'status': bot.status
             })
     except Exception as e:
