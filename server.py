@@ -104,6 +104,14 @@ class SmashKartsRenderBot:
         self.status = "running"
         self.start_time = time.time()
         
+        # Focus on the iframe first
+        try:
+            self._focus_iframe()
+            time.sleep(1)
+            print("✅ Focused on game iframe")
+        except Exception as e:
+            print(f"⚠️ Could not focus iframe: {e}")
+        
         try:
             while self.bot_running:
                 try:
@@ -173,22 +181,74 @@ class SmashKartsRenderBot:
         print("🛑 Bot stopped on Render")
     
     def _send_key_event(self, event_type, key):
-        """Send keyboard event using JavaScript"""
+        """Send keyboard event using multiple methods for better compatibility"""
         try:
-            js_code = f"""
-            var event = new KeyboardEvent('{event_type}', {{
-                key: '{key}',
-                code: '{key}',
-                keyCode: {self._get_key_code(key)},
-                which: {self._get_key_code(key)},
-                bubbles: true,
-                cancelable: true
-            }});
-            document.dispatchEvent(event);
-            """
-            self.driver.execute_script(js_code)
+            # Method 1: Try ActionChains first (most reliable)
+            actions = ActionChains(self.driver)
+            
+            if event_type == 'keydown':
+                if key == 'ArrowUp':
+                    actions.key_down(Keys.ARROW_UP)
+                elif key == 'ArrowDown':
+                    actions.key_down(Keys.ARROW_DOWN)
+                elif key == 'ArrowLeft':
+                    actions.key_down(Keys.ARROW_LEFT)
+                elif key == 'ArrowRight':
+                    actions.key_down(Keys.ARROW_RIGHT)
+                elif key == 'Space':
+                    actions.key_down(Keys.SPACE)
+            elif event_type == 'keyup':
+                if key == 'ArrowUp':
+                    actions.key_up(Keys.ARROW_UP)
+                elif key == 'ArrowDown':
+                    actions.key_up(Keys.ARROW_DOWN)
+                elif key == 'ArrowLeft':
+                    actions.key_up(Keys.ARROW_LEFT)
+                elif key == 'ArrowRight':
+                    actions.key_up(Keys.ARROW_RIGHT)
+                elif key == 'Space':
+                    actions.key_up(Keys.SPACE)
+            
+            actions.perform()
+            print(f"✅ Sent {event_type} event for {key} via ActionChains")
+            
         except Exception as e:
-            print(f"⚠️ Error sending key event {event_type} {key}: {e}")
+            print(f"⚠️ ActionChains failed for {event_type} {key}: {e}")
+            # Method 2: Fallback to JavaScript
+            try:
+                js_code = f"""
+                // Get the iframe
+                var iframe = document.querySelector('iframe');
+                if (iframe && iframe.contentDocument) {{
+                    // Send event to iframe content
+                    var event = new KeyboardEvent('{event_type}', {{
+                        key: '{key}',
+                        code: '{key}',
+                        keyCode: {self._get_key_code(key)},
+                        which: {self._get_key_code(key)},
+                        bubbles: true,
+                        cancelable: true
+                    }});
+                    iframe.contentDocument.dispatchEvent(event);
+                    console.log('Sent {event_type} event for {key} to iframe');
+                }} else {{
+                    // Fallback: send to main document
+                    var event = new KeyboardEvent('{event_type}', {{
+                        key: '{key}',
+                        code: '{key}',
+                        keyCode: {self._get_key_code(key)},
+                        which: {self._get_key_code(key)},
+                        bubbles: true,
+                        cancelable: true
+                    }});
+                    document.dispatchEvent(event);
+                    console.log('Sent {event_type} event for {key} to main document');
+                }}
+                """
+                self.driver.execute_script(js_code)
+                print(f"✅ Sent {event_type} event for {key} via JavaScript")
+            except Exception as js_error:
+                print(f"❌ Both methods failed for {event_type} {key}: {js_error}")
     
     def _get_key_code(self, key):
         """Get key code for JavaScript events"""
@@ -201,6 +261,29 @@ class SmashKartsRenderBot:
         }
         return key_codes.get(key, 0)
     
+    def _focus_iframe(self):
+        """Focus on the game iframe and switch context"""
+        try:
+            # Switch to iframe context
+            iframe = self.driver.find_element(By.TAG_NAME, "iframe")
+            self.driver.switch_to.frame(iframe)
+            print("✅ Switched to iframe context")
+            
+            # Focus on the iframe content
+            js_code = """
+            document.body.focus();
+            console.log('Focused on iframe content');
+            """
+            self.driver.execute_script(js_code)
+            
+        except Exception as e:
+            print(f"⚠️ Error focusing iframe: {e}")
+            # Try to switch back to default content
+            try:
+                self.driver.switch_to.default_content()
+            except:
+                pass
+    
     def _sleep_check(self, duration, action):
         """Sleep while checking if bot should stop"""
         end_time = time.time() + duration
@@ -211,12 +294,24 @@ class SmashKartsRenderBot:
         return True
     
     def _release_all_keys(self):
-        """Release all keys using JavaScript"""
+        """Release all keys using ActionChains"""
         try:
-            for key in ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space']:
-                self._send_key_event('keyup', key)
-        except:
-            pass
+            actions = ActionChains(self.driver)
+            actions.key_up(Keys.ARROW_UP)
+            actions.key_up(Keys.ARROW_DOWN)
+            actions.key_up(Keys.ARROW_LEFT)
+            actions.key_up(Keys.ARROW_RIGHT)
+            actions.key_up(Keys.SPACE)
+            actions.perform()
+            print("✅ Released all keys")
+        except Exception as e:
+            print(f"⚠️ Error releasing keys: {e}")
+            # Fallback to JavaScript
+            try:
+                for key in ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space']:
+                    self._send_key_event('keyup', key)
+            except:
+                pass
     
     def start_bot(self):
         """Start the bot"""
