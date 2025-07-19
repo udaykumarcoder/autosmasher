@@ -29,11 +29,8 @@ COPY . .
 # Create templates directory if it doesn't exist
 RUN mkdir -p templates
 
-# Set environment variable for virtual display
-ENV DISPLAY=:99
-
 # Expose port
 EXPOSE 5000
 
-# Run the application with Xvfb for virtual display
-CMD ["xvfb-run", "--server-args='-screen 0 1920x1080x24'", "python", "server.py"] 
+# Run the application directly (Chrome headless doesn't need Xvfb)
+CMD ["python", "server.py"] 
