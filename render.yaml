@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: smash-karts-bot
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python render_bot_app.py
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.9.16 

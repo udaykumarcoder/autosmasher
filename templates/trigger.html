@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smash Karts Bot - Auto Trigger</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .container {
+            max-width: 600px;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+            text-align: center;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+            color: white;
+            padding: 40px;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+        
+        .content {
+            padding: 40px;
+        }
+        
+        .status-card {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 30px;
+            border-left: 5px solid #007bff;
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 10px;
+        }
+        
+        .status-idle { background: #6c757d; }
+        .status-browser_ready { background: #ffc107; }
+        .status-game_loaded { background: #17a2b8; }
+        .status-running { background: #28a745; }
+        .status-stopped { background: #dc3545; }
+        .status-starting { background: #fd7e14; }
+        
+        .trigger-btn {
+            background: linear-gradient(135deg, #28a745, #20c997);
+            color: white;
+            border: none;
+            padding: 20px 40px;
+            border-radius: 15px;
+            font-size: 1.3em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 20px;
+            width: 100%;
+        }
+        
+        .trigger-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+        }
+        
+        .trigger-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 2em;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .stat-label {
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+        
+        .log {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 20px;
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            max-height: 200px;
+            overflow-y: auto;
+            text-align: left;
+        }
+        
+        .log-entry {
+            margin-bottom: 5px;
+            padding: 5px 0;
+            border-bottom: 1px solid #4a5568;
+        }
+        
+        .log-time {
+            color: #a0aec0;
+            font-size: 0.8em;
+        }
+        
+        .alert {
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: none;
+        }
+        
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .alert-danger {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #007bff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .auto-trigger {
+            background: linear-gradient(135deg, #007bff, #0056b3);
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎮 Smash Karts Bot</h1>
+            <p>Auto-triggered on Render.com</p>
+        </div>
+        
+        <div class="content">
+            <div class="auto-trigger">
+                🤖 Bot will start automatically when you visit this page!
+            </div>
+            
+            <div class="alert alert-success" id="successAlert"></div>
+            <div class="alert alert-danger" id="errorAlert"></div>
+            
+            <div class="status-card">
+                <h3>Bot Status</h3>
+                <p>
+                    <span class="status-indicator status-idle" id="statusIndicator"></span>
+                    <span id="statusText">Idle</span>
+                </p>
+            </div>
+            
+            <button class="trigger-btn" id="triggerBtn" onclick="triggerBot()">
+                <span class="loading" id="triggerLoading" style="display: none;"></span>
+                🚀 Start Bot Now
+            </button>
+            
+            <div class="stats">
+                <div class="stat-card">
+                    <div class="stat-value" id="cycleCount">0</div>
+                    <div class="stat-label">Cycles Completed</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="uptime">00:00</div>
+                    <div class="stat-label">Uptime</div>
+                </div>
+            </div>
+            
+            <div class="log" id="logContainer">
+                <div class="log-entry">
+                    <span class="log-time">[System]</span> Page loaded. Bot will start automatically...
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let startTime = null;
+        let statusInterval = null;
+        let uptimeInterval = null;
+
+        // Auto-trigger bot when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            addLogEntry('Page loaded, triggering bot automatically...');
+            
+            // Wait a moment then trigger
+            setTimeout(() => {
+                triggerBot();
+            }, 2000);
+            
+            // Start status updates
+            statusInterval = setInterval(updateStatus, 2000);
+            uptimeInterval = setInterval(updateUptime, 1000);
+        });
+
+        function showAlert(message, type) {
+            const alert = document.getElementById(type === 'success' ? 'successAlert' : 'errorAlert');
+            alert.textContent = message;
+            alert.style.display = 'block';
+            setTimeout(() => {
+                alert.style.display = 'none';
+            }, 5000);
+        }
+
+        function addLogEntry(message) {
+            const logContainer = document.getElementById('logContainer');
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            const time = new Date().toLocaleTimeString();
+            entry.innerHTML = `<span class="log-time">[${time}]</span> ${message}`;
+            logContainer.appendChild(entry);
+            logContainer.scrollTop = logContainer.scrollHeight;
+        }
+
+        function updateStatus() {
+            fetch('/api/status')
+                .then(response => response.json())
+                .then(data => {
+                    const statusIndicator = document.getElementById('statusIndicator');
+                    const statusText = document.getElementById('statusText');
+                    const cycleCount = document.getElementById('cycleCount');
+                    const triggerBtn = document.getElementById('triggerBtn');
+                    
+                    // Update status
+                    statusIndicator.className = `status-indicator status-${data.status}`;
+                    statusText.textContent = data.status.replace('_', ' ').toUpperCase();
+                    
+                    // Update cycle count
+                    cycleCount.textContent = data.cycle_count;
+                    
+                    // Update button state
+                    if (data.status === 'idle') {
+                        triggerBtn.disabled = false;
+                        triggerBtn.textContent = '🚀 Start Bot Now';
+                    } else {
+                        triggerBtn.disabled = true;
+                        triggerBtn.textContent = `Bot is ${data.status}`;
+                    }
+                    
+                    // Update status indicator color
+                    statusIndicator.className = `status-indicator status-${data.status}`;
+                })
+                .catch(error => {
+                    console.error('Error updating status:', error);
+                });
+        }
+
+        function updateUptime() {
+            if (startTime) {
+                const now = new Date();
+                const diff = Math.floor((now - startTime) / 1000);
+                const minutes = Math.floor(diff / 60);
+                const seconds = diff % 60;
+                document.getElementById('uptime').textContent = 
+                    `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            }
+        }
+
+        function triggerBot() {
+            const btn = document.getElementById('triggerBtn');
+            const loading = document.getElementById('triggerLoading');
+            
+            btn.disabled = true;
+            loading.style.display = 'inline-block';
+            startTime = new Date();
+            addLogEntry('Triggering bot...');
+            
+            fetch('/api/trigger', { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showAlert(data.message, 'success');
+                        addLogEntry('Bot triggered successfully!');
+                    } else {
+                        showAlert(data.message, 'error');
+                        addLogEntry(`Trigger failed: ${data.message}`);
+                        startTime = null;
+                    }
+                })
+                .catch(error => {
+                    showAlert('Network error triggering bot', 'error');
+                    addLogEntry(`Trigger error: ${error.message}`);
+                    startTime = null;
+                })
+                .finally(() => {
+                    btn.disabled = false;
+                    loading.style.display = 'none';
+                });
+        }
+    </script>
+</body>
+</html> 
