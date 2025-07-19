@@ -99,66 +99,64 @@ class SmashKartsRenderBot:
             return False
     
     def bot_cycle(self):
-        """Main bot movement cycle"""
-        print("🤖 Bot started on Render! Running movement pattern...")
+        """Main bot movement cycle using JavaScript keyboard events"""
+        print("🤖 Bot started on Render! Running movement pattern with JavaScript...")
         self.status = "running"
         self.start_time = time.time()
         
         try:
-            # Get the body element to send keys to
-            body = self.driver.find_element(By.TAG_NAME, "body")
-            actions = ActionChains(self.driver)
-            
             while self.bot_running:
                 try:
                     self.cycle_count += 1
                     print(f"🔄 Render Cycle {self.cycle_count}")
                     
                     # 1. Hold Up for 5 seconds
-                    actions.key_down(Keys.ARROW_UP).perform()
+                    self._send_key_event('keydown', 'ArrowUp')
                     if not self._sleep_check(5, "Up"):
                         break
                     
                     # 2. Up+Left for 5 seconds
-                    actions.key_down(Keys.ARROW_LEFT).perform()
+                    self._send_key_event('keydown', 'ArrowLeft')
                     if not self._sleep_check(5, "Up+Left"):
                         break
-                    actions.key_up(Keys.ARROW_LEFT).perform()
+                    self._send_key_event('keyup', 'ArrowLeft')
                     
                     # 3. Up+Right for 5 seconds
-                    actions.key_down(Keys.ARROW_RIGHT).perform()
+                    self._send_key_event('keydown', 'ArrowRight')
                     if not self._sleep_check(5, "Up+Right"):
                         break
-                    actions.key_up(Keys.ARROW_RIGHT).perform()
+                    self._send_key_event('keyup', 'ArrowRight')
                     
                     # 4. Space
-                    actions.key_down(Keys.SPACE).key_up(Keys.SPACE).perform()
+                    self._send_key_event('keydown', 'Space')
+                    self._send_key_event('keyup', 'Space')
                     if not self._sleep_check(0.5, "Space"):
                         break
                     
                     # 5. Down for 5 seconds
-                    actions.key_up(Keys.ARROW_UP).perform()
-                    actions.key_down(Keys.ARROW_DOWN).perform()
+                    self._send_key_event('keyup', 'ArrowUp')
+                    self._send_key_event('keydown', 'ArrowDown')
                     if not self._sleep_check(5, "Down"):
                         break
                     
                     # 6. Down+Left for 5 seconds
-                    actions.key_down(Keys.ARROW_LEFT).perform()
+                    self._send_key_event('keydown', 'ArrowLeft')
                     if not self._sleep_check(5, "Down+Left"):
                         break
-                    actions.key_up(Keys.ARROW_LEFT).perform()
+                    self._send_key_event('keyup', 'ArrowLeft')
                     
                     # 7. Down+Right for 5 seconds
-                    actions.key_down(Keys.ARROW_RIGHT).perform()
+                    self._send_key_event('keydown', 'ArrowRight')
                     if not self._sleep_check(5, "Down+Right"):
                         break
-                    actions.key_up(Keys.ARROW_RIGHT).perform()
+                    self._send_key_event('keyup', 'ArrowRight')
                     
                     # 8. Space
-                    actions.key_down(Keys.SPACE).key_up(Keys.SPACE).perform()
+                    self._send_key_event('keydown', 'Space')
+                    self._send_key_event('keyup', 'Space')
                     
                     # Reset for next cycle
-                    actions.key_up(Keys.ARROW_DOWN).perform()
+                    self._send_key_event('keyup', 'ArrowDown')
                     
                 except Exception as e:
                     self.last_error = str(e)
@@ -174,6 +172,35 @@ class SmashKartsRenderBot:
         self.status = "stopped"
         print("🛑 Bot stopped on Render")
     
+    def _send_key_event(self, event_type, key):
+        """Send keyboard event using JavaScript"""
+        try:
+            js_code = f"""
+            var event = new KeyboardEvent('{event_type}', {{
+                key: '{key}',
+                code: '{key}',
+                keyCode: {self._get_key_code(key)},
+                which: {self._get_key_code(key)},
+                bubbles: true,
+                cancelable: true
+            }});
+            document.dispatchEvent(event);
+            """
+            self.driver.execute_script(js_code)
+        except Exception as e:
+            print(f"⚠️ Error sending key event {event_type} {key}: {e}")
+    
+    def _get_key_code(self, key):
+        """Get key code for JavaScript events"""
+        key_codes = {
+            'ArrowUp': 38,
+            'ArrowDown': 40,
+            'ArrowLeft': 37,
+            'ArrowRight': 39,
+            'Space': 32
+        }
+        return key_codes.get(key, 0)
+    
     def _sleep_check(self, duration, action):
         """Sleep while checking if bot should stop"""
         end_time = time.time() + duration
@@ -184,12 +211,10 @@ class SmashKartsRenderBot:
         return True
     
     def _release_all_keys(self):
-        """Release all keys"""
+        """Release all keys using JavaScript"""
         try:
-            actions = ActionChains(self.driver)
-            for key in [Keys.ARROW_UP, Keys.ARROW_DOWN, Keys.ARROW_LEFT, Keys.ARROW_RIGHT, Keys.SPACE]:
-                actions.key_up(key)
-            actions.perform()
+            for key in ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space']:
+                self._send_key_event('keyup', key)
         except:
             pass
     
