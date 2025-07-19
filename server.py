@@ -86,16 +86,16 @@ class SmashKartsRenderBot:
             self.driver.get(url)
             time.sleep(5)
             
-            # Wait for the iframe to load
+            # Wait for the iframe to load and switch to it
             try:
                 iframe = WebDriverWait(self.driver, 15).until(
                     EC.presence_of_element_located((By.TAG_NAME, "iframe"))
                 )
-                print("✅ Found embedded game iframe")
+                print("✅ Found game iframe")
                 
-                # Switch to iframe context
+                # Switch to iframe context to control the game
                 self.driver.switch_to.frame(iframe)
-                print("✅ Switched to iframe context")
+                print("✅ Switched to game iframe context")
                 
                 # Focus on the game content
                 body = self.driver.find_element(By.TAG_NAME, "body")
@@ -140,9 +140,19 @@ class SmashKartsRenderBot:
         self.status = "running"
         self.start_time = time.time()
         
-        # Get the body element to send keys to (EXACTLY like your working code)
+        # Ensure we're in the iframe context for keyboard control
         try:
-            body = self.driver.find_element(By.TAG_NAME, "body")
+            # Check if we're already in iframe context
+            try:
+                body = self.driver.find_element(By.TAG_NAME, "body")
+                print("✅ Already in iframe context")
+            except:
+                # Switch to iframe if not already there
+                iframe = self.driver.find_element(By.TAG_NAME, "iframe")
+                self.driver.switch_to.frame(iframe)
+                body = self.driver.find_element(By.TAG_NAME, "body")
+                print("✅ Switched to iframe context for bot control")
+            
             actions = ActionChains(self.driver)
             print("✅ Got body element and ActionChains ready")
         except Exception as e:
@@ -300,6 +310,11 @@ def start_bot_automatically():
 def index():
     """Main page - shows Smash Karts embedded"""
     return render_template('game_embedded.html')
+
+@app.route('/control')
+def control_panel():
+    """Control panel page - can be embedded in iframe"""
+    return render_template('control_panel.html')
 
 @app.route('/api/start_bot', methods=['POST'])
 def start_bot():
