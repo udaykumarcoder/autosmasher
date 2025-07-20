@@ -284,6 +284,10 @@
                 <span class="loading" id="stopLoading" style="display: none;"></span>
                 ⏹ Stop Bot
             </button>
+            <button class="btn btn-success" id="testBtn" onclick="testChrome()">
+                <span class="loading" id="testLoading" style="display: none;"></span>
+                🧪 Test Chrome
+            </button>
         </div>
     </div>
     
@@ -291,22 +295,19 @@
         <div class="instructions">
             <h3>🎯 How to Use:</h3>
             <ol>
-                <li><strong>Click "Start Bot"</strong> - This will automatically open Smash Karts and start the bot</li>
-                <li><strong>Wait for setup</strong> - The bot will load the game and begin automation</li>
-                <li><strong>Watch the magic!</strong> - The bot will play automatically on Render servers</li>
-                <li><strong>Your PC stays free!</strong> - You can work normally while bot plays remotely</li>
+                <li><strong>See the game below</strong> - Smash Karts is loaded in the iframe</li>
+                <li><strong>Play manually first</strong> - Sign in and join a game if you want</li>
+                <li><strong>Click "Start Bot"</strong> - This starts automated gameplay on Render servers</li>
+                <li><strong>Watch both!</strong> - You can see the game AND the bot runs in background</li>
+                <li><strong>Your PC stays free!</strong> - Bot runs on Render, not your computer</li>
                 <li><strong>Click "Stop Bot"</strong> - When you want to stop the automation</li>
             </ol>
         </div>
         
         <div class="game-frame">
-            <!-- Bot will open game directly - this is just a visual placeholder -->
-            <div id="game-container" style="width: 100%; height: 100%; background: linear-gradient(45deg, #1a1a1a, #2a2a2a); display: flex; align-items: center; justify-content: center; color: white; font-size: 1.5em; text-align: center;">
-                <div>
-                    <h2>🎮 Smash Karts Bot</h2>
-                    <p>Click "Start Bot" to begin automated gameplay</p>
-                    <p style="font-size: 0.8em; opacity: 0.7;">The bot will open the game directly on Render servers</p>
-                </div>
+            <!-- Game iframe for users to see and play -->
+            <div id="game-container" style="width: 100%; height: 100%; background: #000;">
+                <iframe src="https://smashkarts.io/" allowfullscreen style="width: 100%; height: 100%; border: none;"></iframe>
             </div>
         </div>
     </div>
@@ -416,6 +417,31 @@
                 })
                 .catch(error => {
                     showAlert('Network error stopping bot', 'error');
+                })
+                .finally(() => {
+                    btn.disabled = false;
+                    loading.style.display = 'none';
+                });
+        }
+
+        function testChrome() {
+            const btn = document.getElementById('testBtn');
+            const loading = document.getElementById('testLoading');
+            
+            btn.disabled = true;
+            loading.style.display = 'inline-block';
+            
+            fetch('/api/test_chrome')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showAlert(data.message, 'success');
+                    } else {
+                        showAlert(data.message, 'error');
+                    }
+                })
+                .catch(error => {
+                    showAlert('Network error testing Chrome', 'error');
                 })
                 .finally(() => {
                     btn.disabled = false;

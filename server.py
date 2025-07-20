@@ -53,12 +53,15 @@ class SmashKartsRenderBot:
             
         except Exception as e:
             self.last_error = str(e)
+            self.status = "error"
             print(f"❌ Error starting browser: {e}")
             return False
     
     def navigate_to_game(self, url="https://smashkarts.io/"):
         """Navigate to the game"""
         if not self.driver:
+            self.last_error = "No browser driver available"
+            self.status = "error"
             return False
             
         try:
@@ -81,6 +84,7 @@ class SmashKartsRenderBot:
             
         except Exception as e:
             self.last_error = str(e)
+            self.status = "error"
             print(f"❌ Error loading game: {e}")
             return False
     
@@ -203,23 +207,38 @@ def start_bot_automatically():
     """Start the bot automatically when triggered"""
     try:
         print("🚀 Starting bot automatically...")
+        bot.status = "starting"
         
         # Setup browser
+        print("📱 Setting up browser...")
         if not bot.setup_browser():
+            bot.status = "error"
+            bot.last_error = "Failed to setup browser"
+            print("❌ Browser setup failed")
             return False
         
         # Navigate to game
+        print("🎮 Navigating to game...")
         if not bot.navigate_to_game():
+            bot.status = "error"
+            bot.last_error = "Failed to navigate to game"
+            print("❌ Game navigation failed")
             return False
         
         # Start bot immediately (no waiting for user)
+        print("🤖 Starting bot automation...")
         if not bot.start_bot():
+            bot.status = "error"
+            bot.last_error = "Failed to start bot automation"
+            print("❌ Bot automation failed")
             return False
         
         print("✅ Bot started successfully!")
         return True
         
     except Exception as e:
+        bot.status = "error"
+        bot.last_error = str(e)
         print(f"❌ Error starting bot: {e}")
         return False
 
@@ -309,6 +328,47 @@ def cleanup_bot():
         return jsonify({'success': True, 'message': 'Bot cleaned up!'})
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)})
+
+@app.route('/api/debug')
+def debug_info():
+    """Debug endpoint to see detailed bot information"""
+    return jsonify({
+        'status': bot.status,
+        'bot_running': bot.bot_running,
+        'driver_exists': bot.driver is not None,
+        'last_error': bot.last_error,
+        'cycle_count': bot.cycle_count,
+        'start_time': bot.start_time,
+        'thread_alive': bot.bot_thread.is_alive() if bot.bot_thread else False
+    })
+
+@app.route('/api/test_chrome')
+def test_chrome():
+    """Test if Chrome is working"""
+    try:
+        chrome_options = Options()
+        chrome_options.add_argument("--headless")
+        chrome_options.add_argument("--no-sandbox")
+        chrome_options.add_argument("--disable-dev-shm-usage")
+        
+        print("🧪 Testing Chrome...")
+        driver = webdriver.Chrome(options=chrome_options)
+        driver.get("https://www.google.com")
+        title = driver.title
+        driver.quit()
+        
+        return jsonify({
+            'success': True,
+            'message': f'Chrome test successful! Page title: {title}',
+            'chrome_working': True
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'Chrome test failed: {str(e)}',
+            'chrome_working': False,
+            'error': str(e)
+        })
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
