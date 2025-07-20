@@ -280,10 +280,6 @@
                 <span class="loading" id="startLoading" style="display: none;"></span>
                 🚀 Start Bot
             </button>
-            <button class="btn btn-success" id="readyBtn" onclick="userReady()" disabled>
-                <span class="loading" id="readyLoading" style="display: none;"></span>
-                ✅ I'm Ready
-            </button>
             <button class="btn btn-danger" id="stopBtn" onclick="stopBot()" disabled>
                 <span class="loading" id="stopLoading" style="display: none;"></span>
                 ⏹ Stop Bot
@@ -295,20 +291,22 @@
         <div class="instructions">
             <h3>🎯 How to Use:</h3>
             <ol>
-                <li><strong>Play the game</strong> - Smash Karts is loaded directly below</li>
-                <li><strong>Sign in</strong> - Use Google or any method you prefer</li>
-                <li><strong>Join a game</strong> - Get into an actual match</li>
-                <li><strong>Click "Start Bot"</strong> - This starts the bot in the background</li>
-                <li><strong>Click "I'm Ready"</strong> - When you're in a game and want the bot to take over</li>
-                <li><strong>Watch the magic!</strong> - The bot will play automatically</li>
-                <li><strong>Your PC stays free!</strong> - You can work normally while bot plays on Render</li>
+                <li><strong>Click "Start Bot"</strong> - This will automatically open Smash Karts and start the bot</li>
+                <li><strong>Wait for setup</strong> - The bot will load the game and begin automation</li>
+                <li><strong>Watch the magic!</strong> - The bot will play automatically on Render servers</li>
+                <li><strong>Your PC stays free!</strong> - You can work normally while bot plays remotely</li>
+                <li><strong>Click "Stop Bot"</strong> - When you want to stop the automation</li>
             </ol>
         </div>
         
         <div class="game-frame">
-            <!-- Direct game embed - no iframe wrapper -->
-            <div id="game-container" style="width: 100%; height: 100%; background: #000;">
-                <iframe src="https://smashkarts.io/" allowfullscreen style="width: 100%; height: 100%; border: none;"></iframe>
+            <!-- Bot will open game directly - this is just a visual placeholder -->
+            <div id="game-container" style="width: 100%; height: 100%; background: linear-gradient(45deg, #1a1a1a, #2a2a2a); display: flex; align-items: center; justify-content: center; color: white; font-size: 1.5em; text-align: center;">
+                <div>
+                    <h2>🎮 Smash Karts Bot</h2>
+                    <p>Click "Start Bot" to begin automated gameplay</p>
+                    <p style="font-size: 0.8em; opacity: 0.7;">The bot will open the game directly on Render servers</p>
+                </div>
             </div>
         </div>
     </div>
@@ -342,7 +340,6 @@
                     const statusText = document.getElementById('statusText');
                     const cycleCount = document.getElementById('cycleCount');
                     const startBtn = document.getElementById('startBtn');
-                    const readyBtn = document.getElementById('readyBtn');
                     const stopBtn = document.getElementById('stopBtn');
                     
                     // Update status
@@ -354,7 +351,6 @@
                     
                     // Update button states
                     startBtn.disabled = data.status !== 'idle';
-                    readyBtn.disabled = data.status !== 'waiting_for_user';
                     stopBtn.disabled = !data.bot_running;
                     
                     // Update status indicator color
@@ -394,34 +390,6 @@
                 })
                 .catch(error => {
                     showAlert('Network error starting bot', 'error');
-                })
-                .finally(() => {
-                    btn.disabled = false;
-                    loading.style.display = 'none';
-                });
-        }
-
-        function userReady() {
-            const btn = document.getElementById('readyBtn');
-            const loading = document.getElementById('readyLoading');
-            
-            btn.disabled = true;
-            loading.style.display = 'inline-block';
-            startTime = new Date();
-            
-            fetch('/api/user_ready', { method: 'POST' })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        showAlert(data.message, 'success');
-                    } else {
-                        showAlert(data.message, 'error');
-                        startTime = null;
-                    }
-                })
-                .catch(error => {
-                    showAlert('Network error signaling ready', 'error');
-                    startTime = null;
                 })
                 .finally(() => {
                     btn.disabled = false;

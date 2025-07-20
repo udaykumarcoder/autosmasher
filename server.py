@@ -27,37 +27,26 @@ class SmashKartsRenderBot:
         """Setup Chrome browser for Render.com operation"""
         chrome_options = Options()
         
-        # Create a separate profile for the bot to avoid conflicts
-        temp_profile = os.path.join(os.getcwd(), "bot_profile")
-        chrome_options.add_argument(f"--user-data-dir={temp_profile}")
-        
-        # Anti-detection measures
+        # Render.com specific options
+        chrome_options.add_argument("--headless")
+        chrome_options.add_argument("--no-sandbox")
+        chrome_options.add_argument("--disable-dev-shm-usage")
+        chrome_options.add_argument("--disable-gpu")
+        chrome_options.add_argument("--window-size=1920,1080")
         chrome_options.add_argument("--disable-blink-features=AutomationControlled")
         chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
         chrome_options.add_experimental_option('useAutomationExtension', False)
         
-        # Performance and stealth options
-        chrome_options.add_argument("--no-sandbox")
-        chrome_options.add_argument("--disable-dev-shm-usage")
-        chrome_options.add_argument("--disable-gpu")
-        chrome_options.add_argument("--disable-logging")
+        # Additional options for Render
         chrome_options.add_argument("--disable-extensions")
         chrome_options.add_argument("--disable-web-security")
-        
-        # Use a different port to avoid conflicts
-        chrome_options.add_argument("--remote-debugging-port=9223")
-        
-        # For Render.com, we need headless but with better compatibility
-        chrome_options.add_argument("--headless")
-        chrome_options.add_argument("--window-size=1920,1080")
+        chrome_options.add_argument("--allow-running-insecure-content")
+        chrome_options.add_argument("--disable-features=VizDisplayCompositor")
         
         print("🌐 Starting browser on Render...")
         try:
             self.driver = webdriver.Chrome(options=chrome_options)
-            
-            # Hide automation indicators
             self.driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
-            
             self.status = "browser_ready"
             print("✅ Browser started on Render!")
             return True
@@ -67,45 +56,24 @@ class SmashKartsRenderBot:
             print(f"❌ Error starting browser: {e}")
             return False
     
-    def navigate_to_game(self, url=None):
-        """Navigate to our web page with embedded game"""
+    def navigate_to_game(self, url="https://smashkarts.io/"):
+        """Navigate to the game"""
         if not self.driver:
             return False
-        
-        # Get the correct URL for the environment
-        if url is None:
-            # Check if we're on Render.com
-            render_url = os.environ.get('RENDER_EXTERNAL_URL')
-            if render_url:
-                url = render_url
-            else:
-                url = "http://localhost:5000/"
             
         try:
-            print(f"🎮 Opening our web page at {url}...")
+            print(f"🎮 Navigating to {url}...")
             self.driver.get(url)
             time.sleep(5)
             
-            # Wait for the iframe to load and switch to it
-            try:
-                iframe = WebDriverWait(self.driver, 15).until(
-                    EC.presence_of_element_located((By.TAG_NAME, "iframe"))
-                )
-                print("✅ Found game iframe")
-                
-                # Switch to iframe context to control the game
-                self.driver.switch_to.frame(iframe)
-                print("✅ Switched to game iframe context")
-                
-                # Focus on the game content
-                body = self.driver.find_element(By.TAG_NAME, "body")
-                body.click()
-                print("✅ Focused on game content")
-                
-            except Exception as e:
-                print(f"⚠️ Could not switch to iframe: {e}")
-                # Stay on main page as fallback
-                self.driver.switch_to.default_content()
+            # Wait for page to load
+            WebDriverWait(self.driver, 15).until(
+                EC.presence_of_element_located((By.TAG_NAME, "body"))
+            )
+            
+            # Focus on the game
+            body = self.driver.find_element(By.TAG_NAME, "body")
+            body.click()
             
             self.status = "game_loaded"
             print("✅ Game loaded and focused!")
@@ -116,100 +84,56 @@ class SmashKartsRenderBot:
             print(f"❌ Error loading game: {e}")
             return False
     
-    def wait_for_user_ready(self):
-        """Wait for user to be ready in the game"""
-        try:
-            print("⏳ Waiting for user to be ready in game...")
-            self.status = "waiting_for_user"
-            
-            # Wait for user to signal they're ready
-            # This will be triggered by the web interface
-            while self.status == "waiting_for_user":
-                time.sleep(1)
-            
-            return True
-            
-        except Exception as e:
-            self.last_error = str(e)
-            print(f"❌ Error waiting for user: {e}")
-            return False
-    
     def bot_cycle(self):
-        """Main bot movement cycle using your proven approach"""
-        print("🤖 Bot started! Running movement pattern...")
+        """Main bot movement cycle - SIMPLIFIED FOR WORKING"""
+        print("🤖 Bot started! Cart is moving...")
         self.status = "running"
         self.start_time = time.time()
         
-        # Ensure we're in the iframe context for keyboard control
         try:
-            # Check if we're already in iframe context
-            try:
-                body = self.driver.find_element(By.TAG_NAME, "body")
-                print("✅ Already in iframe context")
-            except:
-                # Switch to iframe if not already there
-                iframe = self.driver.find_element(By.TAG_NAME, "iframe")
-                self.driver.switch_to.frame(iframe)
-                body = self.driver.find_element(By.TAG_NAME, "body")
-                print("✅ Switched to iframe context for bot control")
-            
+            # Get the body element to send keys to
+            body = self.driver.find_element(By.TAG_NAME, "body")
             actions = ActionChains(self.driver)
-            print("✅ Got body element and ActionChains ready")
-        except Exception as e:
-            print(f"❌ Error getting body element: {e}")
-            return
-        
-        try:
+            
             while self.bot_running:
                 try:
                     self.cycle_count += 1
-                    print(f"🔄 Cycle {self.cycle_count}")
+                    print(f"🔄 Cycle {self.cycle_count} - Cart moving!")
                     
-                    # 1. Hold Up for 5 seconds
+                    # SIMPLE MOVEMENT PATTERN - JUST MAKE THE CART MOVE
+                    
+                    # 1. Forward movement
                     actions.key_down(Keys.ARROW_UP).perform()
-                    if not self._sleep_check(5, "Up"):
+                    if not self._sleep_check(3, "Forward"):
                         break
                     
-                    # 2. Up+Left for 5 seconds
+                    # 2. Turn left
                     actions.key_down(Keys.ARROW_LEFT).perform()
-                    if not self._sleep_check(5, "Up+Left"):
+                    if not self._sleep_check(2, "Left"):
                         break
                     actions.key_up(Keys.ARROW_LEFT).perform()
                     
-                    # 3. Up+Right for 5 seconds
+                    # 3. Turn right
                     actions.key_down(Keys.ARROW_RIGHT).perform()
-                    if not self._sleep_check(5, "Up+Right"):
+                    if not self._sleep_check(2, "Right"):
                         break
                     actions.key_up(Keys.ARROW_RIGHT).perform()
                     
-                    # 4. Space
+                    # 4. Jump
                     actions.key_down(Keys.SPACE).key_up(Keys.SPACE).perform()
-                    if not self._sleep_check(0.5, "Space"):
+                    if not self._sleep_check(1, "Jump"):
                         break
                     
-                    # 5. Down for 5 seconds
+                    # 5. Backward
                     actions.key_up(Keys.ARROW_UP).perform()
                     actions.key_down(Keys.ARROW_DOWN).perform()
-                    if not self._sleep_check(5, "Down"):
+                    if not self._sleep_check(3, "Backward"):
                         break
                     
-                    # 6. Down+Left for 5 seconds
-                    actions.key_down(Keys.ARROW_LEFT).perform()
-                    if not self._sleep_check(5, "Down+Left"):
-                        break
-                    actions.key_up(Keys.ARROW_LEFT).perform()
-                    
-                    # 7. Down+Right for 5 seconds
-                    actions.key_down(Keys.ARROW_RIGHT).perform()
-                    if not self._sleep_check(5, "Down+Right"):
-                        break
-                    actions.key_up(Keys.ARROW_RIGHT).perform()
-                    
-                    # 8. Space
-                    actions.key_down(Keys.SPACE).key_up(Keys.SPACE).perform()
-                    
-                    # Reset for next cycle
+                    # 6. Stop and repeat
                     actions.key_up(Keys.ARROW_DOWN).perform()
+                    if not self._sleep_check(1, "Pause"):
+                        break
                     
                 except Exception as e:
                     self.last_error = str(e)
@@ -225,8 +149,6 @@ class SmashKartsRenderBot:
         self.status = "stopped"
         print("🛑 Bot stopped")
     
-    # Removed complex iframe methods - using simple ActionChains like working code
-    
     def _sleep_check(self, duration, action):
         """Sleep while checking if bot should stop"""
         end_time = time.time() + duration
@@ -237,13 +159,12 @@ class SmashKartsRenderBot:
         return True
     
     def _release_all_keys(self):
-        """Release all keys using ActionChains (like your working code)"""
+        """Release all keys"""
         try:
             actions = ActionChains(self.driver)
             for key in [Keys.ARROW_UP, Keys.ARROW_DOWN, Keys.ARROW_LEFT, Keys.ARROW_RIGHT, Keys.SPACE]:
                 actions.key_up(key)
             actions.perform()
-            print("✅ Released all keys")
         except:
             pass
     
@@ -291,11 +212,7 @@ def start_bot_automatically():
         if not bot.navigate_to_game():
             return False
         
-        # Wait for user to be ready
-        if not bot.wait_for_user_ready():
-            return False
-        
-        # Start bot
+        # Start bot immediately (no waiting for user)
         if not bot.start_bot():
             return False
         
@@ -343,21 +260,14 @@ def start_bot():
 
 @app.route('/api/user_ready', methods=['POST'])
 def user_ready():
-    """API endpoint to signal user is ready"""
+    """API endpoint to signal user is ready - SIMPLIFIED"""
     try:
-        if bot.status == "waiting_for_user":
-            bot.status = "user_ready"
-            return jsonify({
-                'success': True, 
-                'message': 'User ready! Starting bot...',
-                'status': 'user_ready'
-            })
-        else:
-            return jsonify({
-                'success': False, 
-                'message': f'Bot is not waiting for user (status: {bot.status})',
-                'status': bot.status
-            })
+        # Just return success - no complex waiting logic
+        return jsonify({
+            'success': True, 
+            'message': 'User ready signal received!',
+            'status': 'ready'
+        })
     except Exception as e:
         return jsonify({
             'success': False, 
