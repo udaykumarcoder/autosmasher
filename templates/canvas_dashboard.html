@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smash Karts Canvas Bot</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        
+        .game-canvas-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1;
+        }
+        
+        .game-canvas {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(45deg, #0f0f0f, #1a1a1a);
+            border: 3px solid #00ff88;
+            border-radius: 15px;
+            box-shadow: 0 0 50px rgba(0, 255, 136, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .canvas-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            text-align: center;
+            z-index: 10;
+        }
+        
+        .canvas-overlay.hidden {
+            display: none;
+        }
+        
+        .game-title {
+            font-size: 3em;
+            font-weight: bold;
+            margin-bottom: 20px;
+            text-shadow: 0 0 20px #00ff88;
+            animation: glow 2s ease-in-out infinite alternate;
+        }
+        
+        @keyframes glow {
+            from { text-shadow: 0 0 20px #00ff88; }
+            to { text-shadow: 0 0 30px #00ff88, 0 0 40px #00ff88; }
+        }
+        
+        .control-panel {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.9);
+            border: 2px solid #00ff88;
+            border-radius: 15px;
+            padding: 20px;
+            color: white;
+            min-width: 300px;
+            z-index: 100;
+            backdrop-filter: blur(10px);
+        }
+        
+        .status-display {
+            margin-bottom: 20px;
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+            margin-right: 10px;
+            animation: pulse 2s infinite;
+        }
+        
+        .status-idle { background: #666; }
+        .status-browser_ready { background: #ffaa00; }
+        .status-game_loaded { background: #00aaff; }
+        .status-running { background: #00ff88; }
+        .status-stopped { background: #ff4444; }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .btn {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s;
+        }
+        
+        .btn:hover::before {
+            left: 100%;
+        }
+        
+        .btn-success {
+            background: linear-gradient(135deg, #00ff88, #00cc6a);
+            color: #000;
+        }
+        
+        .btn-danger {
+            background: linear-gradient(135deg, #ff4444, #cc3333);
+            color: white;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+        
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .stat-card {
+            background: linear-gradient(135deg, #1a1a1a, #2a2a2a);
+            border: 1px solid #00ff88;
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #00ff88;
+            margin-bottom: 5px;
+        }
+        
+        .stat-label {
+            font-size: 0.8em;
+            color: #ccc;
+        }
+        
+        .game-info {
+            background: rgba(0, 0, 0, 0.8);
+            border: 1px solid #00ff88;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 20px;
+        }
+        
+        .game-info h4 {
+            color: #00ff88;
+            margin-bottom: 10px;
+        }
+        
+        .game-info p {
+            font-size: 0.9em;
+            line-height: 1.4;
+            color: #ccc;
+        }
+        
+        .alert {
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 10px;
+            display: none;
+            font-size: 0.9em;
+        }
+        
+        .alert-success {
+            background: rgba(0, 255, 136, 0.2);
+            border: 1px solid #00ff88;
+            color: #00ff88;
+        }
+        
+        .alert-danger {
+            background: rgba(255, 68, 68, 0.2);
+            border: 1px solid #ff4444;
+            color: #ff4444;
+        }
+        
+        .loading {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #00ff88;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 8px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .game-visualization {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            width: 200px;
+            height: 150px;
+            background: rgba(0, 0, 0, 0.8);
+            border: 2px solid #00ff88;
+            border-radius: 10px;
+            z-index: 50;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #00ff88;
+            font-size: 0.9em;
+            text-align: center;
+        }
+        
+        .movement-indicator {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 60px;
+            height: 60px;
+            border: 2px solid #00ff88;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2em;
+            animation: move 2s infinite;
+        }
+        
+        @keyframes move {
+            0%, 100% { transform: translate(-50%, -50%) scale(1); }
+            50% { transform: translate(-50%, -50%) scale(1.2); }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-canvas-container">
+        <div class="game-canvas">
+            <div class="canvas-overlay" id="canvasOverlay">
+                <div class="game-title">🎮 SMASH KARTS</div>
+                <p style="font-size: 1.2em; margin-bottom: 30px;">Canvas Bot Interface</p>
+                <p style="font-size: 1em; opacity: 0.8;">Click "START BOT" to begin automated gameplay</p>
+            </div>
+        </div>
+        
+        <div class="game-visualization">
+            <div class="movement-indicator" id="movementIndicator">🚗</div>
+        </div>
+    </div>
+    
+    <div class="control-panel">
+        <div class="alert alert-success" id="successAlert"></div>
+        <div class="alert alert-danger" id="errorAlert"></div>
+        
+        <div class="status-display">
+            <h3>Bot Status</h3>
+            <p>
+                <span class="status-indicator status-idle" id="statusIndicator"></span>
+                <span id="statusText">Idle</span>
+            </p>
+        </div>
+        
+        <div class="controls">
+            <button class="btn btn-success" id="onBotBtn" onclick="onBot()">
+                <span class="loading" id="onBotLoading" style="display: none;"></span>
+                🚗 START BOT
+            </button>
+            <button class="btn btn-danger" id="offBotBtn" onclick="offBot()" disabled>
+                <span class="loading" id="offBotLoading" style="display: none;"></span>
+                🛑 STOP BOT
+            </button>
+        </div>
+        
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-value" id="cycleCount">0</div>
+                <div class="stat-label">Cycles</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="uptime">00:00</div>
+                <div class="stat-label">Uptime</div>
+            </div>
+        </div>
+        
+        <div class="game-info">
+            <h4>🎯 Canvas Bot Features</h4>
+            <p>• Real-time game visualization</p>
+            <p>• Automated movement patterns</p>
+            <p>• Live status monitoring</p>
+            <p>• Background operation</p>
+        </div>
+    </div>
+
+    <script>
+        let startTime = null;
+        let statusInterval = null;
+        let uptimeInterval = null;
+        let currentMovement = 'idle';
+
+        // Initialize canvas interface
+        document.addEventListener('DOMContentLoaded', function() {
+            updateStatus();
+            statusInterval = setInterval(updateStatus, 2000);
+            uptimeInterval = setInterval(updateUptime, 1000);
+        });
+
+        function showAlert(message, type) {
+            const alert = document.getElementById(type === 'success' ? 'successAlert' : 'errorAlert');
+            alert.textContent = message;
+            alert.style.display = 'block';
+            setTimeout(() => {
+                alert.style.display = 'none';
+            }, 5000);
+        }
+
+        function updateMovementIndicator(movement) {
+            const indicator = document.getElementById('movementIndicator');
+            const movements = {
+                'forward': '⬆️',
+                'backward': '⬇️',
+                'left': '⬅️',
+                'right': '➡️',
+                'jump': '🦘',
+                'idle': '🚗'
+            };
+            indicator.textContent = movements[movement] || '🚗';
+        }
+
+        function updateStatus() {
+            fetch('/api/status')
+                .then(response => response.json())
+                .then(data => {
+                    const statusIndicator = document.getElementById('statusIndicator');
+                    const statusText = document.getElementById('statusText');
+                    const cycleCount = document.getElementById('cycleCount');
+                    const canvasOverlay = document.getElementById('canvasOverlay');
+                    
+                    // Update status
+                    statusIndicator.className = `status-indicator status-${data.status}`;
+                    statusText.textContent = data.status.replace('_', ' ').toUpperCase();
+                    
+                    // Update cycle count
+                    cycleCount.textContent = data.cycle_count;
+                    
+                    // Update button states
+                    const onBotBtn = document.getElementById('onBotBtn');
+                    const offBotBtn = document.getElementById('offBotBtn');
+                    
+                    onBotBtn.disabled = data.bot_running;
+                    offBotBtn.disabled = !data.bot_running;
+                    
+                    // Hide overlay when bot is running
+                    if (data.bot_running) {
+                        canvasOverlay.classList.add('hidden');
+                        updateMovementIndicator('forward');
+                    } else {
+                        canvasOverlay.classList.remove('hidden');
+                        updateMovementIndicator('idle');
+                    }
+                    
+                    // Update status indicator color
+                    statusIndicator.className = `status-indicator status-${data.status}`;
+                })
+                .catch(error => {
+                    console.error('Error updating status:', error);
+                });
+        }
+
+        function updateUptime() {
+            if (startTime) {
+                const now = new Date();
+                const diff = Math.floor((now - startTime) / 1000);
+                const minutes = Math.floor(diff / 60);
+                const seconds = diff % 60;
+                document.getElementById('uptime').textContent = 
+                    `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            }
+        }
+
+        function onBot() {
+            const btn = document.getElementById('onBotBtn');
+            const loading = document.getElementById('onBotLoading');
+            
+            btn.disabled = true;
+            loading.style.display = 'inline-block';
+            startTime = new Date();
+            
+            fetch('/api/on_bot', { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showAlert(data.message, 'success');
+                    } else {
+                        showAlert(data.message, 'error');
+                        startTime = null;
+                    }
+                })
+                .catch(error => {
+                    showAlert('Network error starting bot', 'error');
+                    startTime = null;
+                })
+                .finally(() => {
+                    btn.disabled = false;
+                    loading.style.display = 'none';
+                });
+        }
+
+        function offBot() {
+            const btn = document.getElementById('offBotBtn');
+            const loading = document.getElementById('offBotLoading');
+            
+            btn.disabled = true;
+            loading.style.display = 'inline-block';
+            
+            fetch('/api/off_bot', { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showAlert(data.message, 'success');
+                        startTime = null;
+                    } else {
+                        showAlert(data.message, 'error');
+                    }
+                })
+                .catch(error => {
+                    showAlert('Network error stopping bot', 'error');
+                })
+                .finally(() => {
+                    btn.disabled = false;
+                    loading.style.display = 'none';
+                });
+        }
+    </script>
+</body>
+</html> 

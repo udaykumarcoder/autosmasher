@@ -21,6 +21,7 @@ class RenderSmashKartsBot:
         self.status = "idle"
         self.cycle_count = 0
         self.last_error = None
+        self.start_time = None
         
     def setup_browser(self):
         """Setup Chrome browser for Render.com"""
@@ -87,6 +88,7 @@ class RenderSmashKartsBot:
         """Main bot movement cycle - SIMPLIFIED FOR WORKING"""
         print("🤖 Bot started! Cart is moving...")
         self.status = "running"
+        self.start_time = time.time()
         
         try:
             # Get the body element to send keys to
@@ -199,7 +201,7 @@ bot = RenderSmashKartsBot()
 
 @app.route('/')
 def index():
-    """Main dashboard - automatically setup browser and game"""
+    """Main canvas interface - automatically setup browser and game"""
     # Auto-setup when page loads
     if bot.status == "idle":
         try:
@@ -207,14 +209,19 @@ def index():
                 bot.navigate_to_game()
         except:
             pass
-    return render_template('dashboard.html')
+    return render_template('canvas_dashboard.html')
 
 @app.route('/api/status')
 def get_status():
     """Get bot status"""
+    uptime = 0
+    if bot.start_time:
+        uptime = int(time.time() - bot.start_time)
+    
     return jsonify({
         'status': bot.status,
         'cycle_count': bot.cycle_count,
+        'uptime': uptime,
         'error': bot.last_error,
         'bot_running': bot.bot_running
     })
